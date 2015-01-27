@@ -1,81 +1,60 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Wed Jan 21 16:32:47 2015
-
-@author: Pc-stock2
-"""
+"""shuffle and process the original data"""
 
 import os
-os.chdir('C:/Users/Pc-stock2/Desktop/Kaggle')
+import csv
+import random
 
+def initiate_categories():
+    global category_name, category_value, category_counter
+    category_name = header[5:14]
+    category_value = [{} for i in range(len(category_name))]
+    category_counter = [0 for i in range(len(category_name))]
 
-def update_category_values(row_number,x):
+def update_category_values(row):
     """ we create a dictionnaries to update the category values"""
-    if (row_number==0):
-        global category_name, category_value, category_counter
-        category_name=names[5:14]
-        category_value=[{} for i in range(len(category_name))]
-        category_counter=[0 for i in range(len(category_name))]
-    
     for i in range(len(category_name)):
         #update dictionary if needed
-        if x[i+5] not in category_value[i]:
-            category_value[i][x[i+5]]=category_counter[i]
-            category_counter[i]+=1
+        if row[i+5] not in category_value[i]:
+            category_value[i][row[i+5]] = category_counter[i]
+            category_counter[i] += 1
         #update vector
-        x[i+5]=category_value[i][x[i+5]]
+        row[i+5] = category_value[i][row[i+5]]
 
+def process_header():
+    return [header[1]] + header[3:]+ ['day','hour']
 
+def process_row(row):
+    update_category_values(row)
+    row += [row[2][4:6], row[2][6:8]]
+    row = [float(i) for i in row]
+    return row
 
+def shuffle_and_process_big_file(filename, seed=123, n_chunck=1000):
+    """ shuffle the file """
+    # separate the big file in small files randomly
+    _tmp = [open('.tmp_chunck' + str(i), 'wb') for i in range(n_chunck)]
+    _writers = [csv.writer(f) for f in _tmp]
+    with open(filename) as source:
+        reader = csv.reader(source)
+        global header
+        header = next(reader)
+        for l in reader: _writers[int(random.random() * n_chunck)].writerow(l)
+    os.remove(filename)
+    for f in _tmp: f.close()
+    # shuffle each of the small files and merge them
+    with open(filename, 'wb') as target:
+        writer = csv.writer(target)
+        writer.writerow(process_header())
+        initiate_categories()
+        for i in range(n_chunck):
+            with open('.tmp_chunck' + str(i)) as _f:
+                _reader = csv.reader(_f)
+                data = [(random.random(), row) for row in _reader]
+                data.sort()
+                for _, row in data:
+                    row = process_row(row)
+                    writer.writerow([row[1]]+row[3:])
+                _f.close()
+            os.remove('.tmp_chunck' + str(i))
 
-def process_csv(raw_data, seed, p, train_set, valid_set):
-    """ create a training set and validation set from the raw data """
-    import csv
-    import random
-
-    random.seed(seed)    
-    
-    i = open(raw_data)
-    o1 = open(train_set,'wb')
-    o2 = open(valid_set,'wb')
-    
-    reader = csv.reader(i)
-    writer1 = csv.writer(o1)
-    writer2 = csv.writer(o2)
-    
-    global names #save the feature names
-    names=next(reader)
-    
-    for row_number, row in enumerate(reader):
-        #update category values
-        update_category_values(row_number,row)
-        #divide YYMMDDHH into two seperate features 'day' and 'hour' 
-        #since 'year' and 'month' never change
-        row += [row[2][4:6],row[2][6:8]]
-        #make sure all values are floats - will be useful later
-        row = [float(i) for i in row]
-        
-        #write the headers for the output files
-        #we don't write 'click' - the output - in a seperate file as it takes too much space
-        #we remove the raw 'id' and 'hour' as we don't use them
-        if (row_number==0): 
-            writer1.writerow([names[1]] + names[3:]+ ['day','hour'])
-            writer2.writerow([names[1]] + names[3:]+ ['day','hour'])
-
-        #seperate the two sets according to p
-        r=random.random()
-        if (r<p):
-            writer1.writerow([row[1]]+row[3:])
-        else:
-            writer2.writerow([row[1]]+row[3:])
-            
-        #keep track every 500,000            
-        if (row_number%500000==0): print 'ok'
-    
-    o1.close()
-    o2.close()
-
-####################################################
-####################################################
-#
-process_csv('raw_data.csv', 1, 0.9, 'train.csv', 'valid.csv')
+shuffle_and_process_big_file('train.csv')

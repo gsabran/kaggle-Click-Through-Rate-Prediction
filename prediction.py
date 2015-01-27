@@ -8,7 +8,6 @@ Created on Wed Jan 21 19:05:31 2015
 
 
 import os
-os.chdir('C:/Users/Pc-stock2/Desktop/Kaggle')
 import pandas as pd
 import time
 import random
