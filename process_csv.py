@@ -10,23 +10,28 @@ def initiate_categories():
     category_value = [{} for i in range(len(category_name))]
     category_counter = [0 for i in range(len(category_name))]
 
-def update_category_values(row):
+def update_category_values(row, include_target):
     """ we create a dictionnaries to update the category values"""
     for i in range(len(category_name)):
         #update dictionary if needed
-        if row[i+5] not in category_value[i]:
-            category_value[i][row[i+5]] = category_counter[i]
+        idx = include_target+i+4
+        if row[idx] not in category_value[i]:
+            category_value[i][row[idx]] = category_counter[i]
             category_counter[i] += 1
         #update vector
-        row[i+5] = category_value[i][row[i+5]]
+        row[idx] = category_value[i][row[idx]]
 
 def process_header():
     return [header[1]] + header[3:]+ ['day','hour']
 
-def process_row(row):
-    update_category_values(row)
-    row += [row[2][4:6], row[2][6:8]]
-    row = [float(i) for i in row]
+def process_row(row, include_target=True):
+    update_category_values(row, include_target)
+    row += [row[include_target+1][4:6], row[include_target+1][6:8]]
+    try:
+        row = [float(i) for i in row]
+    except ValueError:
+        print 'ValueError', row
+        raise
     return row
 
 def shuffle_and_process_big_file(filename, seed=123, n_chunck=1000):
@@ -56,5 +61,15 @@ def shuffle_and_process_big_file(filename, seed=123, n_chunck=1000):
                     writer.writerow([row[1]]+row[3:])
                 _f.close()
             os.remove('.tmp_chunck' + str(i))
+    # convert the test file in a similar way
+    with open('test.csv') as f, open('.test.csv', 'wb') as f2:
+        reader = csv.reader(f)
+        writer = csv.writer(f2)
+        writer.writerow(['id'] + process_header()[1:])
+        next(reader)
+        for row in reader:
+            row = process_row(row, include_target=False)
+            writer.writerow([int(row[0])]+row[2:])
+    os.rename('.test.csv', 'test.csv')
 
 shuffle_and_process_big_file('train.csv')
