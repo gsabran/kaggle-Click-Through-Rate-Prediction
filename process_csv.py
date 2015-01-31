@@ -1,4 +1,7 @@
-"""shuffle and process the original data"""
+"""
+shuffle and process the original data. This takes a while to run but should just be done once.
+Need: train data under 'train.csv' and test data under 'test.csv' Files will be replaced.
+"""
 
 import os
 import csv
@@ -27,12 +30,9 @@ def process_header():
 def process_row(row, include_target=True):
     update_category_values(row, include_target)
     row += [row[include_target+1][4:6], row[include_target+1][6:8]]
-    try:
-        row = [float(i) for i in row]
-    except ValueError:
-        print 'ValueError', row
-        raise
-    return row
+    if include_target: row = [float(i) for i in row]
+    else: row = [row[0]] + [float(i) for i in row[1:]]
+    return [row[include_target]]+row[include_target+2:]
 
 def shuffle_and_process_big_file(filename, seed=123, n_chunck=1000):
     """ shuffle the file """
@@ -57,8 +57,7 @@ def shuffle_and_process_big_file(filename, seed=123, n_chunck=1000):
                 data = [(random.random(), row) for row in _reader]
                 data.sort()
                 for _, row in data:
-                    row = process_row(row)
-                    writer.writerow([row[1]]+row[3:])
+                    writer.writerow(process_row(row))
                 _f.close()
             os.remove('.tmp_chunck' + str(i))
     # convert the test file in a similar way
@@ -68,8 +67,7 @@ def shuffle_and_process_big_file(filename, seed=123, n_chunck=1000):
         writer.writerow(['id'] + process_header()[1:])
         next(reader)
         for row in reader:
-            row = process_row(row, include_target=False)
-            writer.writerow([int(row[0])]+row[2:])
+            writer.writerow(process_row(row, include_target=False))
     os.rename('.test.csv', 'test.csv')
 
 shuffle_and_process_big_file('train.csv')
