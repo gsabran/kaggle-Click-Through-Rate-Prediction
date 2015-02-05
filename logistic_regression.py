@@ -13,12 +13,21 @@ from nn import *
 data_getter = GetData()
 nn=neural_network()
 iteration=0
-while (data_getter.file_ended is False):
-    if (iteration%100 ==0): print 'row number' + str(iteration*5000)
-    X_train, Y_train = data_getter.next(n=5000)
-    if (nn.initialized is False): nn.initialize_parameters(len(X_train[0]))
-    nn.fit(X_train,Y_train)
-    iteration +=1
+#while (data_getter.file_ended is False):
+#    if (iteration%100 ==0): print 'row number' + str(iteration*5000)
+#    X_train, Y_train = data_getter.next(n=5000)
+#    if (nn.initialized is False): nn.initialize_parameters(len(X_train[0]))
+#    nn.fit(X_train,Y_train)
+#    iteration +=1
+
+
+
+X_train, Y_train = data_getter.next(n=1000)
+nn.initialize_parameters(len(X_train[0]))
+nn.fit(X_train,Y_train)
+iteration +=1
+
+
 
 nn.print_cost_checking()
 nn.theta
