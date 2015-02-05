@@ -5,6 +5,7 @@ class _getData:
     """Return the next rows from the test set. Should only be instanciated once."""
     def __init__(self):
         self.datareader = csv.reader(open('train.csv'))
+        self.file_ended = False
         next(self.datareader)
 
     def next(self, n=1):
@@ -14,6 +15,7 @@ class _getData:
             try: l = next(self.datareader)
             except StopIteration:
                 print 'Not enough lines: need', n-i, 'more'
+                self.file_ended = True
                 raise
             data.append([float(i) for i in l])
         data = np.array(data)
